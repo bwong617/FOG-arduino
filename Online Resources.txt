@@ -1,0 +1,5 @@
+FFT Library:
+http://wiki.openmusiclabs.com/wiki/ArduinoFFT
+
+Forum Topic:
+https://forum.arduino.cc/index.php?topic=175679.0
