@@ -3,3 +3,6 @@ http://wiki.openmusiclabs.com/wiki/ArduinoFFT
 
 Forum Topic:
 https://forum.arduino.cc/index.php?topic=175679.0
+
+Accelerometer Data Collection:
+https://chionophilous.wordpress.com/2011/06/20/getting-started-with-accelerometers-and-micro-controllers-arduino-adxl335/
