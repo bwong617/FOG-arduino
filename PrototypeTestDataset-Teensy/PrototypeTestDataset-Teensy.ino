@@ -6,8 +6,8 @@
 // - Calc FFT after every 32 samples, after the first 256 are collected
 // - Locomotor Band: 0.5Hz - 3.0Hz
 // - Freeze Band: 3.0Hz - 8.0Hz
-// - Freeze Threshold: 2      (Istvan used 3)
-// - Energy Threshold: 500    (Istvan used 4000 ~ 2^12)
+// - Freeze Threshold: 1      (Istvan used 3)
+// - Energy Threshold: 4000    (Istvan used 4000 ~ 2^12)
 
 #define ARM_MATH_CM4
 #include <arm_math.h>
@@ -36,7 +36,7 @@ double zero_G = 512.0;
 
 //// Sampling
 const int SAMPLE_RATE_HZ = 64;                                    // 64Hz = 64 samples per second *****PARAM*****
-const unsigned long SAMPLE_INTERVAL = 1000 / SAMPLE_RATE_HZ;    // Interval of time between each sample collection
+const unsigned long SAMPLE_INTERVAL = 1000000 / SAMPLE_RATE_HZ;    // Interval of time between each sample collection
 float BIN_SIZE = (float)SAMPLE_RATE_HZ/(float)FFT_SIZE;              // Bin size of FFT output data (Hz)
 
 //// Timers
@@ -51,7 +51,7 @@ double z_acc;                              // Input data converted to accelerati
 
 //// Threshold and Cutoff Inputs *****PARAM*****
 const float freeze_threshold = 1.0;            // *May vary person-to-person 
-const int energy_threshold = 300;
+const int energy_threshold = 4000;
 float locomotor_lower_cutoff = 0.5;        // Locomotor Band: 0.5Hz - 3.0Hz
 float locomotor_upper_cutoff = 3;
 float freeze_lower_cutoff = 3;             // Freeze Band: 3.0Hz - 8.0Hz
@@ -67,7 +67,6 @@ float energy_index;
 //****DATA SET****
 //// Variables for dataset version
 String inString = "";
-int floatData;
 //****DATA SET****
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -117,16 +116,13 @@ void setup() {
   freeze_upper_cutoff *= (1/BIN_SIZE);
 
   // Begin sampling acceleration
-  Serial.println("Initial sampling, please wait...");
   samplingBegin();
 }
 
-//=====================================================================================================================================================================//
-
 void loop() {
-  while(1) { 
     // Calculate FFT if a full sample is available.
     if (samplingIsDone()) {
+      Serial.println("FFT");
       // Run FFT on sample data.
       arm_cfft_radix4_instance_f32 fft_inst;
       arm_cfft_radix4_init_f32(&fft_inst, FFT_SIZE, 0, 1);
@@ -134,19 +130,19 @@ void loop() {
       // Calculate magnitude of complex numbers output by the FFT.
       arm_cmplx_mag_f32(samples, magnitudes, FFT_SIZE);
   
-      checkFreeze();
+      processValues();
+      cueControl();
   
       // Restart sampling.
       samplingBegin();
     }
-  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // UTILITY FUNCTIONS
 ////////////////////////////////////////////////////////////////////////////////
 
-void checkFreeze() {
+void processValues() {
   //// Integrate to get the magnitude sum over each band (Trapezoid Rule: http://tutorial.math.lamar.edu/Classes/CalcII/ApproximatingDefIntegrals.aspx )
   // Note: Bin size: SAMPLE_RATE_HZ/FFT_SIZE = 64/256 = 0.25 -> 0, 0.25, 0.50, 0.75, 1.00, ...
   for (int k = 0; k <= freeze_upper_cutoff; k++){
@@ -178,17 +174,44 @@ void checkFreeze() {
   Serial.print("\tEI: "); Serial.print(energy_index);
 }
 
+void cueControl() {
+        // Cue Control: If both thresholds are exceeded, FOG is identified -> trigger the cues
+      if (freeze_index > freeze_threshold && energy_index > (float)energy_threshold){
+        // Trigger cue pin HIGH
+        ////digitalWrite(motor_pin, HIGH);
+        ////digitalWrite(laser_pin, HIGH);
+        Serial.println("\t\tFOG");
+        end_freeze_flag = true;
+      }
+      /*else{                // If FOG is not occurring, or no longer occurring, turn off cues
+        // Trigger cue pin LOW
+        if (end_freeze_flag == true){
+          end_freeze_flag = false;
+          end_cue_flag = true;
+          fog_millis = 0;
+          Serial.println("\t\tEND");
+        }
+        else{
+          Serial.println("\t\t...");
+        }
+        //digitalWrite(motor_pin, LOW);
+        //digitalWrite(laser_pin, LOW);
+        //Serial.println("\t\t...");
+      }*/
+      
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // SAMPLING FUNCTIONS
 ////////////////////////////////////////////////////////////////////////////////
 
 void samplingCallback() {
-  // Read from the ADC and store the sample data
+  // Read from the accelerometer and store the sample data
   ////samples[sampleCounter] = (float32_t)analogRead(ACCL_Z_INPUT_PIN);
-  
   //****DATA SET****
-  if (Serial.available() > 0) {    
+  if (Serial.available() > 0) {  
     // *READ FROM DATASET FILE (SERIAL.READ)
+    inString = "";
     int inChar;
   
     do {
@@ -196,18 +219,24 @@ void samplingCallback() {
       if (isDigit(inChar)){
         inString += (char)inChar;
       }
-    } while ((char)inChar != ',');
-        
-    floatData = inString.toFloat();
-    inString = "";
+    } while ((char)inChar != ',');     
+    samples[sampleCounter] = inString.toFloat();
+    // Complex FFT functions require a coefficient for the imaginary part of the input.
+    // Since we only have real data, set this coefficient to zero.
+    samples[sampleCounter+1] = 0.0;
+    // Update sample buffer position and stop after the buffer is filled
+    sampleCounter += 2;
+    if (sampleCounter >= FFT_SIZE*2) {
+      samplingTimer.end();
+    }
     digitalWrite(LED_PIN, HIGH);
         
-  } else {
+  } else {      
       digitalWrite(LED_PIN, LOW);
-  }
-  samples[sampleCounter] = (float32_t)floatData;
+  }  
   //****DATA SET****
-  
+
+  /*
   // Complex FFT functions require a coefficient for the imaginary part of the input.
   // Since we only have real data, set this coefficient to zero.
   samples[sampleCounter+1] = 0.0;
@@ -215,7 +244,7 @@ void samplingCallback() {
   sampleCounter += 2;
   if (sampleCounter >= FFT_SIZE*2) {
     samplingTimer.end();
-  }
+  }*/
 }
 
 void samplingBegin() {

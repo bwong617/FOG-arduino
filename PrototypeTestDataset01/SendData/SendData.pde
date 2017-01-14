@@ -16,7 +16,7 @@ void setup()
   // select serial port
   // println("Available serial ports:");
   // printArray(Serial.list());
-  myPort = new Serial(this, Serial.list()[0], 38400);
+  myPort = new Serial(this, Serial.list()[0], 9600);
 }
 
 
