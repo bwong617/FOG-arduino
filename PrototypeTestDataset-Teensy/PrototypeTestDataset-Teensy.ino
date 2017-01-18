@@ -15,7 +15,7 @@
 #define FFT_SIZE 256     // Set to number of samples for FFT *****PARAM*****
 
 //// Arduino Pin Declarations
-const int ACCL_Z_INPUT_PIN = A0;     // z-axis acceleration input pin
+const int ACCL_Z_INPUT_PIN = 14;     // z-axis acceleration input pin
 const int LED_PIN = 13;    // LED to indicate when data is read from the file
 const int MOTOR_PIN = 5;  // Tactile cue output pin
 const int LASER_PIN = 6;  // Visual cue output pin
@@ -132,6 +132,7 @@ void loop() {
   
       processValues();
       cueControl();
+      digitalWrite(LED_PIN, LOW);
   
       // Restart sampling.
       samplingBegin();
@@ -181,6 +182,7 @@ void cueControl() {
         ////digitalWrite(motor_pin, HIGH);
         ////digitalWrite(laser_pin, HIGH);
         Serial.println("\t\tFOG");
+        digitalWrite(LED_PIN, HIGH);
         end_freeze_flag = true;
       }
       /*else{                // If FOG is not occurring, or no longer occurring, turn off cues
@@ -228,12 +230,9 @@ void samplingCallback() {
     sampleCounter += 2;
     if (sampleCounter >= FFT_SIZE*2) {
       samplingTimer.end();
-    }
-    digitalWrite(LED_PIN, HIGH);
+    }    
         
-  } else {      
-      digitalWrite(LED_PIN, LOW);
-  }  
+  } 
   //****DATA SET****
 
   /*
