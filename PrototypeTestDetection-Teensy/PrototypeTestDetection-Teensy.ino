@@ -257,7 +257,7 @@ void samplingBegin() {
   }
 
   // Reset the sample index such that new samples do not replace the carry-over input data (sample order is maintained)
-  i = (FFT_SIZE - fft_calc_rate) * 2;
+  sampleCounter = (FFT_SIZE - fft_calc_rate) * 2;
       
   // Reset the variables that collect a sum of powers
   locomotor_band = 0;
