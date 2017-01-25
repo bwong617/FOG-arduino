@@ -15,7 +15,7 @@
 #define FFT_SIZE 256     // Set to number of samples for FFT *****PARAM*****
 
 //// Arduino Pin Declarations
-const int ACCL_Z_INPUT_PIN = 14;     // z-axis acceleration input pin
+const int ACCL_Z_INPUT_PIN = 16;     // z-axis acceleration input pin
 const int LED_PIN = 13;    // LED to indicate when data is read from the file
 const int MOTOR_PIN = 5;  // Tactile cue output pin
 const int LASER_PIN = 6;  // Visual cue output pin
@@ -65,19 +65,15 @@ float freeze_band;
 float freeze_index;                        // Compare indices with thresholds to identify FOG; If both indices exceed their corresponding thresholds, FOG is identified
 float energy_index;
 
-//****DATA SET****
-//// Variables for dataset version
-String inString = "";
-//****DATA SET****
-
 ////////////////////////////////////////////////////////////////////////////////
 // INTERNAL STATE
 ////////////////////////////////////////////////////////////////////////////////
 
 IntervalTimer samplingTimer;
 float samples[FFT_SIZE*2];
+float samples2[FFT_SIZE*2];
 float magnitudes[FFT_SIZE];
-int sampleCounter = 0;
+volatile int sampleCounter = 0;
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN SKETCH FUNCTIONS
@@ -116,20 +112,20 @@ void setup() {
   freeze_upper_cutoff *= (1/BIN_SIZE);
 
   // Begin sampling acceleration
-  ////samplingBegin();
   samplingTimer.begin(samplingCallback, SAMPLE_INTERVAL);
 }
 
 void loop() {
     // Calculate FFT if a full sample is available.
     if (samplingIsDone()) {
+      memcpy(samples2, samples, sizeof samples);
       Serial.println("FFT");
       // Run FFT on sample data.
       arm_cfft_radix4_instance_f32 fft_inst;
       arm_cfft_radix4_init_f32(&fft_inst, FFT_SIZE, 0, 1);
-      arm_cfft_radix4_f32(&fft_inst, samples);
+      arm_cfft_radix4_f32(&fft_inst, samples2);
       // Calculate magnitude of complex numbers output by the FFT.
-      arm_cmplx_mag_f32(samples, magnitudes, FFT_SIZE);
+      arm_cmplx_mag_f32(samples2, magnitudes, FFT_SIZE);
   
       processValues();
       cueControl();
@@ -210,49 +206,22 @@ void cueControl() {
 
 void samplingCallback() {
   // Read from the accelerometer and store the sample data
-  samples[sampleCounter] = (float32_t)analogRead((ACCL_Z_INPUT_PIN - zero_G)/scale);
-  //****DATA SET****
-  /*if (Serial.available() > 0) {  
-    // *READ FROM DATASET FILE (SERIAL.READ)
-    inString = "";
-    int inChar;
-  
-    do {
-      inChar = Serial.read();
-      if (isDigit(inChar)){
-        inString += (char)inChar;
-      }
-    } while ((char)inChar != ',');     
-    samples[sampleCounter] = inString.toFloat();
-    // Complex FFT functions require a coefficient for the imaginary part of the input.
-    // Since we only have real data, set this coefficient to zero.
-    samples[sampleCounter+1] = 0.0;
-    // Update sample buffer position and stop after the buffer is filled
-    sampleCounter += 2;
-    if (sampleCounter >= FFT_SIZE*2) {
-      samplingTimer.end();
-    }    
-        
-  } */
-  //****DATA SET****
-
+  samples[sampleCounter] = analogRead(ACCL_Z_INPUT_PIN); 
   // Complex FFT functions require a coefficient for the imaginary part of the input.
   // Since we only have real data, set this coefficient to zero.
   samples[sampleCounter+1] = 0.0;
   // Update sample buffer position and stop after the buffer is filled
   sampleCounter += 2;
-  if (sampleCounter >= FFT_SIZE*2) {
+  if (sampleCounter >= FFT_SIZE*2) {;
     samplingTimer.end();
   }
 }
 
-void samplingBegin() {
-  // Reset sample buffer position and start callback at necessary rate.
-  //sampleCounter = 0;
-  // Shift carry-over input data; note that "0" data points do not need to be carried over
+void samplingBegin() {  
+  //   Shift carry-over input data; note that "0" data points do not need to be carried over
   //   (To maintain the order of sampled data, newer sample data is shifted to override older sample data at the beginning
-  //    of the FFT input list, to make room at the end of the list for new sample data to be recorded)
-  for (int j = fft_calc_rate*2 ; j < FFT_SIZE*2 ; j += 2) {   
+  //   of the FFT input list, to make room at the end of the list for new sample data to be recorded)
+  for (int j = fft_calc_rate*2 ; j < FFT_SIZE*2 ; j += 2) { 
         samples[j - (fft_calc_rate * 2)] = samples[j];
   }
 
