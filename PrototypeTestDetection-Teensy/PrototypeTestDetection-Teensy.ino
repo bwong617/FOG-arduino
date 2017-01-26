@@ -212,7 +212,7 @@ void samplingCallback() {
   samples[sampleCounter+1] = 0.0;
   // Update sample buffer position and stop after the buffer is filled
   sampleCounter += 2;
-  if (sampleCounter >= FFT_SIZE*2) {;
+  if (sampleCounter >= FFT_SIZE*2) {
     samplingTimer.end();
   }
 }
