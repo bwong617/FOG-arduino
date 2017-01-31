@@ -15,6 +15,8 @@
 #define FFT_SIZE 256     // Set to number of samples for FFT *****PARAM*****
 
 //// Arduino Pin Declarations
+const int ACCL_X_INPUT_PIN = 14;     // x-axis acceleration input pin
+const int ACCL_Y_INPUT_PIN = 15;     // y-axis acceleration input pin
 const int ACCL_Z_INPUT_PIN = 16;     // z-axis acceleration input pin
 const int LED_PIN = 13;    // LED to indicate when data is read from the file
 const int MOTOR_PIN = 5;  // Tactile cue output pin
@@ -27,7 +29,7 @@ const int LASER_PIN = 6;  // Visual cue output pin
   //   ADC (0-1023): map 0V to 0ADC, 3.3V to 1023ADC
   //   0G -> 512ADC
   //   0.330 V/G × (1023 ADC units) / 3.3 V = 102.3 (ADC units)/G
-double scale = 102.3;
+double scale = 0.1023;
 
   //   zero_G is the reading we expect from the sensor when it detects
   //   no acceleration. Subtract this value from the sensor reading to
@@ -51,7 +53,7 @@ double z_acc;                              // Input data converted to accelerati
 const int fft_calc_rate = 32;              // Number of new samples collected before FFT is recalculated *****PARAM*****
 
 //// Threshold and Cutoff Inputs *****PARAM*****
-const float freeze_threshold = 1.0;            // *May vary person-to-person 
+const float freeze_threshold = 3.0;            // *May vary person-to-person 
 const int energy_threshold = 4000;
 float locomotor_lower_cutoff = 0.5;        // Locomotor Band: 0.5Hz - 3.0Hz
 float locomotor_upper_cutoff = 3;
@@ -74,6 +76,10 @@ float samples[FFT_SIZE*2];
 float samples2[FFT_SIZE*2];
 float magnitudes[FFT_SIZE];
 volatile int sampleCounter = 0;
+
+float acc_x;
+float acc_y;
+float acc_z;
 
 ////////////////////////////////////////////////////////////////////////////////
 // MAIN SKETCH FUNCTIONS
@@ -119,7 +125,7 @@ void loop() {
     // Calculate FFT if a full sample is available.
     if (samplingIsDone()) {
       memcpy(samples2, samples, sizeof samples);
-      Serial.println("FFT");
+      Serial.println("\t");
       // Run FFT on sample data.
       arm_cfft_radix4_instance_f32 fft_inst;
       arm_cfft_radix4_init_f32(&fft_inst, FFT_SIZE, 0, 1);
@@ -177,7 +183,7 @@ void cueControl() {
         // Trigger cue pin HIGH
         ////digitalWrite(motor_pin, HIGH);
         ////digitalWrite(laser_pin, HIGH);
-        Serial.println("\t\tFOG");
+        Serial.print("\tFOG\t");
         digitalWrite(LED_PIN, HIGH);
         end_freeze_flag = true;
       }
@@ -206,7 +212,18 @@ void cueControl() {
 
 void samplingCallback() {
   // Read from the accelerometer and store the sample data
-  samples[sampleCounter] = analogRead(ACCL_Z_INPUT_PIN); 
+  //samples[sampleCounter] = analogRead(ACCL_Z_INPUT_PIN);
+  samples[sampleCounter] = ((analogRead(ACCL_Y_INPUT_PIN) - zero_G)/scale);
+  Serial.print("\tacc_z: "); Serial.println(samples[sampleCounter]);
+  
+  //acc_x = (analogRead(ACCL_X_INPUT_PIN))/scale;
+  //acc_y = ((analogRead(ACCL_Y_INPUT_PIN) - zero_G)/scale);
+  //acc_z = ((analogRead(ACCL_Z_INPUT_PIN) - zero_G)/scale)-1000.0;
+
+  //Serial.print("\tacc_x: "); Serial.print(acc_x);
+  //Serial.print("\tacc_y: "); Serial.print(acc_y);
+  //Serial.print("\tacc_z: "); Serial.println(acc_z);
+   
   // Complex FFT functions require a coefficient for the imaginary part of the input.
   // Since we only have real data, set this coefficient to zero.
   samples[sampleCounter+1] = 0.0;
