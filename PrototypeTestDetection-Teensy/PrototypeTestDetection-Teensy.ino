@@ -11,6 +11,7 @@
 
 #define ARM_MATH_CM4
 #include <arm_math.h>
+#include <SoftwareSerial.h>
 
 #define FFT_SIZE 256     // Set to number of samples for FFT *****PARAM*****
 
@@ -72,10 +73,12 @@ float energy_index;
 ////////////////////////////////////////////////////////////////////////////////
 
 IntervalTimer samplingTimer;
-float samples[FFT_SIZE*2];
-float samples2[FFT_SIZE*2];
+float samples[FFT_SIZE*2];  // Used as a buffer
+float samples2[FFT_SIZE*2]; // Used to perform FFT calculations on
 float magnitudes[FFT_SIZE];
 volatile int sampleCounter = 0;
+
+SoftwareSerial BTSerial(0, 1); // Bluetooth
 
 float acc_x;
 float acc_y;
@@ -214,7 +217,7 @@ void samplingCallback() {
   // Read from the accelerometer and store the sample data
   //samples[sampleCounter] = analogRead(ACCL_Z_INPUT_PIN);
   samples[sampleCounter] = ((analogRead(ACCL_Y_INPUT_PIN) - zero_G)/scale);
-  Serial.print("\tacc_z: "); Serial.println(samples[sampleCounter]);
+  //Serial.print("\tacc_z: "); Serial.println(samples[sampleCounter]);
   
   //acc_x = (analogRead(ACCL_X_INPUT_PIN))/scale;
   //acc_y = ((analogRead(ACCL_Y_INPUT_PIN) - zero_G)/scale);
