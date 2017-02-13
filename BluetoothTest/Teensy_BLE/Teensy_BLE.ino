@@ -15,12 +15,13 @@ void setup() {
  
 void loop()
 {
-   /*if (BTSerial.available())
+   if (BTSerial.available())
        Serial.write(BTSerial.read());
    if (Serial.available())
-       BTSerial.write(Serial.read());*/
+       BTSerial.write(Serial.read());
+    //BTSerial.write("HELLO");
 
-  char c;
+  /*char c;
   if (Serial.available()) {
     c = Serial.read();
     BTSerial.print(c);
@@ -28,5 +29,5 @@ void loop()
   if (BTSerial.available()) {
     c = BTSerial.read();
     Serial.print(c);    
-  }
+  }*/
 }
