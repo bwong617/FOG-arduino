@@ -13,12 +13,14 @@
 #include <arm_math.h>
 #include <SoftwareSerial.h>
 
+#define HWSERIAL Serial3
+
 #define FFT_SIZE 256     // Set to number of samples for FFT *****PARAM*****
 
 //// Arduino Pin Declarations
-const int ACCL_X_INPUT_PIN = 14;     // x-axis acceleration input pin
-const int ACCL_Y_INPUT_PIN = 15;     // y-axis acceleration input pin
-const int ACCL_Z_INPUT_PIN = 16;     // z-axis acceleration input pin
+const int ACCL_X_INPUT_PIN = 0;     // x-axis acceleration input pin
+const int ACCL_Y_INPUT_PIN = 1;     // y-axis acceleration input pin
+const int ACCL_Z_INPUT_PIN = 2;     // z-axis acceleration input pin
 const int LED_PIN = 13;    // LED to indicate when data is read from the file
 const int MOTOR_PIN = 5;  // Tactile cue output pin
 const int LASER_PIN = 6;  // Visual cue output pin
@@ -92,12 +94,13 @@ void setup() {
   // Initialize serial communication
   // Max Teensy Baud Rate = 38400Hz
   Serial.begin(38400);
-  
+  HWSERIAL.begin(9600);
   // Tell the analog-to-digital converter (ADC) to use an external reference voltage (AREF pin)
   analogReference(EXTERNAL);
 
   // Accelerometer data input pin
-  pinMode(ACCL_Z_INPUT_PIN, INPUT);
+  //pinMode(ACCL_Z_INPUT_PIN, INPUT);
+  pinMode(ACCL_Y_INPUT_PIN, INPUT);
   
   // Cue control output pin
   pinMode(LED_PIN, OUTPUT);
@@ -188,6 +191,7 @@ void cueControl() {
         ////digitalWrite(laser_pin, HIGH);
         Serial.print("\tFOG\t");
         digitalWrite(LED_PIN, HIGH);
+        HWSERIAL.write("AT+PIO21");
         end_freeze_flag = true;
       }
       else{                // If FOG is not occurring, or no longer occurring, turn off cues
@@ -205,6 +209,7 @@ void cueControl() {
         //digitalWrite(laser_pin, LOW);
         //Serial.println("\t\t...");*/
         digitalWrite(LED_PIN, LOW);
+        HWSERIAL.write("AT+PIO20");
       }
       
 }
@@ -257,4 +262,3 @@ void samplingBegin() {
 boolean samplingIsDone() {
   return sampleCounter >= FFT_SIZE*2;
 }
-
