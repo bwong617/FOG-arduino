@@ -44,10 +44,11 @@ const int SAMPLE_RATE_HZ = 64;                                    // 64Hz = 64 s
 const unsigned long SAMPLE_INTERVAL = 1000000 / SAMPLE_RATE_HZ;    // Interval of time between each sample collection in microseconds
 float BIN_SIZE = (float)SAMPLE_RATE_HZ/(float)FFT_SIZE;              // Bin size of FFT output data (Hz)
 
-//// Timers
+//// Cue Control
 unsigned long fog_millis = 0;
-bool end_freeze_flag = false;
-bool end_cue_flag = false;
+bool fog_flag = false;
+const int cue_duration = 4000;
+int motor_state = LOW;
 
 //// Input data variables and counters
 int i;                                     // Input data index
@@ -95,6 +96,8 @@ void setup() {
   // Max Teensy Baud Rate = 38400Hz
   Serial.begin(38400);
   HWSERIAL.begin(9600);
+  // Make sure laser is off
+  HWSERIAL.write("AT+PIO20");
   // Tell the analog-to-digital converter (ADC) to use an external reference voltage (AREF pin)
   analogReference(EXTERNAL);
 
@@ -104,8 +107,7 @@ void setup() {
   
   // Cue control output pin
   pinMode(LED_PIN, OUTPUT);
-  /*pinMode(motor_pin, OUTPUT);
-  pinMode(laser_pin, OUTPUT);*/
+  pinMode(MOTOR_PIN, OUTPUT);
   
   // Initialize variables
   i = 0;
@@ -186,32 +188,30 @@ void processValues() {
 void cueControl() {
         // Cue Control: If both thresholds are exceeded, FOG is identified -> trigger the cues
       if (freeze_index > freeze_threshold && energy_index > (float)energy_threshold){
-        // Trigger cue pin HIGH
-        ////digitalWrite(motor_pin, HIGH);
-        ////digitalWrite(laser_pin, HIGH);
+        fog_flag = true;
+        fog_millis = millis();
         Serial.print("\tFOG\t");
+      }
+      else {                // If FOG is not occurring, or no longer occurring, turn off cues
+        if(fog_flag && (millis() - fog_millis) > cue_duration) {
+          digitalWrite(LED_PIN, LOW);
+          motor_state = LOW;
+          digitalWrite(MOTOR_PIN, motor_state);
+          HWSERIAL.write("AT+PIO20");
+          fog_flag = false;
+        }      
+      }
+
+      if (fog_flag) {
+        if(motor_state == LOW)
+          motor_state = HIGH;
+        else
+          motor_state = LOW;
+        digitalWrite(MOTOR_PIN, motor_state);
+
         digitalWrite(LED_PIN, HIGH);
-        HWSERIAL.write("AT+PIO21");
-        end_freeze_flag = true;
+        HWSERIAL.write("AT+PIO21");        
       }
-      else{                // If FOG is not occurring, or no longer occurring, turn off cues
-        // Trigger cue pin LOW
-        /*if (end_freeze_flag == true){
-          end_freeze_flag = false;
-          end_cue_flag = true;
-          fog_millis = 0;
-          Serial.println("\t\tEND");
-        }
-        else{
-          Serial.println("\t\t...");
-        }
-        //digitalWrite(motor_pin, LOW);
-        //digitalWrite(laser_pin, LOW);
-        //Serial.println("\t\t...");*/
-        digitalWrite(LED_PIN, LOW);
-        HWSERIAL.write("AT+PIO20");
-      }
-      
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -220,9 +220,7 @@ void cueControl() {
 
 void samplingCallback() {
   // Read from the accelerometer and store the sample data
-  //samples[sampleCounter] = analogRead(ACCL_Z_INPUT_PIN);
   samples[sampleCounter] = ((analogRead(ACCL_Y_INPUT_PIN) - zero_G)/scale);
-  //Serial.print("\tacc_z: "); Serial.println(samples[sampleCounter]);
   
   //acc_x = (analogRead(ACCL_X_INPUT_PIN))/scale;
   //acc_y = ((analogRead(ACCL_Y_INPUT_PIN) - zero_G)/scale);
