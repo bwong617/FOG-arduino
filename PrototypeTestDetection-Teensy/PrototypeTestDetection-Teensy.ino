@@ -97,7 +97,7 @@ void setup() {
   Serial.begin(38400);
   HWSERIAL.begin(9600);
   // Make sure laser is off
-  HWSERIAL.write("AT+PIO20");
+  HWSERIAL.write("AT+PIO30");
   // Tell the analog-to-digital converter (ADC) to use an external reference voltage (AREF pin)
   analogReference(EXTERNAL);
 
@@ -188,6 +188,11 @@ void processValues() {
 void cueControl() {
         // Cue Control: If both thresholds are exceeded, FOG is identified -> trigger the cues
       if (freeze_index > freeze_threshold && energy_index > (float)energy_threshold){
+        if(!fog_flag) {
+          digitalWrite(LED_PIN, HIGH);
+          HWSERIAL.write("AT+PIO31");     
+        }
+        
         fog_flag = true;
         fog_millis = millis();
         Serial.print("\tFOG\t");
@@ -197,7 +202,7 @@ void cueControl() {
           digitalWrite(LED_PIN, LOW);
           motor_state = LOW;
           digitalWrite(MOTOR_PIN, motor_state);
-          HWSERIAL.write("AT+PIO20");
+          HWSERIAL.write("AT+PIO30");
           fog_flag = false;
         }      
       }
@@ -207,10 +212,7 @@ void cueControl() {
           motor_state = HIGH;
         else
           motor_state = LOW;
-        digitalWrite(MOTOR_PIN, motor_state);
-
-        digitalWrite(LED_PIN, HIGH);
-        HWSERIAL.write("AT+PIO21");        
+        digitalWrite(MOTOR_PIN, motor_state);   
       }
 }
 
