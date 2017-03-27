@@ -7,7 +7,7 @@
 // - Locomotor Band: 0.5Hz - 3.0Hz
 // - Freeze Band: 3.0Hz - 8.0Hz
 // - Freeze Threshold: 1      (Istvan used 3)
-// - Energy Threshold: 4000    (Istvan used 4000)
+// - Energy Threshold: 2000    (Istvan used 4000)
 
 #define ARM_MATH_CM4
 #include <arm_math.h>
@@ -58,7 +58,7 @@ const int fft_calc_rate = 32;              // Number of new samples collected be
 
 //// Threshold and Cutoff Inputs *****PARAM*****
 const float freeze_threshold = 3.0;            // *May vary person-to-person 
-const int energy_threshold = 4000;
+const int energy_threshold = 2000;
 float locomotor_lower_cutoff = 0.5;        // Locomotor Band: 0.5Hz - 3.0Hz
 float locomotor_upper_cutoff = 3;
 float freeze_lower_cutoff = 3;             // Freeze Band: 3.0Hz - 8.0Hz
